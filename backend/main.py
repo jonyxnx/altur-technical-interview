@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import init_db
+from routes import calls
 import os
 
 app = FastAPI(
@@ -19,7 +20,7 @@ app.add_middleware(
 
 init_db()
 
-
+app.include_router(calls.router)
 
 @app.get("/")
 async def root():
