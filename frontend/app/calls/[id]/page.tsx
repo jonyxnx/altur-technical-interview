@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getCallById, CallRecord, ApiError } from '@/lib/api';
+import { getCallById, CallRecord, ApiError, addCallTag, removeCallTag } from '@/lib/api';
 import AudioPlayer from '@/components/AudioPlayer';
 
 export default function CallDetailPage() {
@@ -13,6 +13,9 @@ export default function CallDetailPage() {
   const [call, setCall] = useState<CallRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [newTag, setNewTag] = useState('');
+  const [tagError, setTagError] = useState<string | null>(null);
+  const [tagLoading, setTagLoading] = useState(false);
 
   useEffect(() => {
     if (callId) {
@@ -49,6 +52,43 @@ export default function CallDetailPage() {
       });
     } catch {
       return timestamp;
+    }
+  };
+
+  const handleAddTag = async () => {
+    if (!call) return;
+    const trimmedTag = newTag.trim();
+    if (!trimmedTag) {
+      setTagError('Tag cannot be empty.');
+      return;
+    }
+
+    setTagError(null);
+    setTagLoading(true);
+    try {
+      const updatedCall = await addCallTag(call.id, trimmedTag);
+      setCall(updatedCall);
+      setNewTag('');
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to add tag.';
+      setTagError(message);
+    } finally {
+      setTagLoading(false);
+    }
+  };
+
+  const handleRemoveTag = async (tag: string) => {
+    if (!call) return;
+    setTagError(null);
+    setTagLoading(true);
+    try {
+      const updatedCall = await removeCallTag(call.id, tag);
+      setCall(updatedCall);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to remove tag.';
+      setTagError(message);
+    } finally {
+      setTagLoading(false);
     }
   };
 
@@ -129,23 +169,65 @@ export default function CallDetailPage() {
             </div>
 
             {/* Tags */}
-            {call.tags && call.tags.length > 0 && (
-              <div>
-                <h2 className="text-sm font-semibold text-gray-900 mb-2">
-                  Tags
-                </h2>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900 mb-2">
+                Tags
+              </h2>
+              <div className="space-y-3">
                 <div className="flex flex-wrap gap-1.5">
-                  {call.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-full border border-gray-200"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                  {call.tags && call.tags.length > 0 ? (
+                    call.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-full border border-gray-200"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          className="text-gray-500 hover:text-red-500"
+                          aria-label={`Remove ${tag}`}
+                          disabled={tagLoading}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-500">No tags yet. Add one below.</p>
+                  )}
                 </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddTag();
+                      }
+                    }}
+                    placeholder="Add a custom tag"
+                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#237bff]"
+                    disabled={tagLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddTag}
+                    disabled={tagLoading}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
+                    style={{ background: 'linear-gradient(90deg, #237bff, #9ec5ff)' }}
+                  >
+                    {tagLoading ? 'Saving...' : 'Add Tag'}
+                  </button>
+                </div>
+                {tagError && (
+                  <p className="text-xs text-red-600">{tagError}</p>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Summary */}
             {call.summary && (

@@ -1,6 +1,3 @@
-"""
-API routes for call management
-"""
 import os
 import json
 import uuid
@@ -14,9 +11,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc
 import aiofiles
 from pydub import AudioSegment
-
 from database import get_db, CallRecord as DBCallRecord
-from models import CallRecordResponse, UploadResponse, CallsListResponse
+from models import CallRecordResponse, UploadResponse, CallsListResponse, TagRequest
 from services.stt_service import STTService
 from services.llm_service import LLMService
 
@@ -248,6 +244,76 @@ async def get_call_by_id(
     
     tags_list = json.loads(db_call.tags) if db_call.tags else []
     
+    return CallRecordResponse(
+        id=db_call.id,
+        filename=db_call.filename,
+        upload_timestamp=db_call.upload_timestamp,
+        transcript=db_call.transcript or "",
+        summary=db_call.summary or "",
+        tags=tags_list
+    )
+
+
+@router.post("/{call_id}/tags", response_model=CallRecordResponse)
+async def add_call_tag(
+    call_id: str,
+    tag_request: TagRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Add a custom tag to a call
+    """
+    db_call = db.query(DBCallRecord).filter(DBCallRecord.id == call_id).first()
+
+    if not db_call:
+        raise HTTPException(status_code=404, detail="Call not found")
+
+    tag_value = tag_request.tag.strip()
+    if not tag_value:
+        raise HTTPException(status_code=400, detail="Tag cannot be empty")
+
+    tags_list = json.loads(db_call.tags) if db_call.tags else []
+    if tag_value not in tags_list:
+        tags_list.append(tag_value)
+        db_call.tags = json.dumps(tags_list)
+        db.commit()
+        db.refresh(db_call)
+
+    return CallRecordResponse(
+        id=db_call.id,
+        filename=db_call.filename,
+        upload_timestamp=db_call.upload_timestamp,
+        transcript=db_call.transcript or "",
+        summary=db_call.summary or "",
+        tags=tags_list
+    )
+
+
+@router.delete("/{call_id}/tags", response_model=CallRecordResponse)
+async def remove_call_tag(
+    call_id: str,
+    tag: str = Query(..., description="Tag value to remove"),
+    db: Session = Depends(get_db)
+):
+    """
+    Remove a tag from a call
+    """
+    db_call = db.query(DBCallRecord).filter(DBCallRecord.id == call_id).first()
+
+    if not db_call:
+        raise HTTPException(status_code=404, detail="Call not found")
+
+    tag_value = tag.strip()
+    if not tag_value:
+        raise HTTPException(status_code=400, detail="Tag cannot be empty")
+
+    tags_list = json.loads(db_call.tags) if db_call.tags else []
+    if tag_value in tags_list:
+        tags_list = [t for t in tags_list if t != tag_value]
+        db_call.tags = json.dumps(tags_list)
+        db.commit()
+        db.refresh(db_call)
+
     return CallRecordResponse(
         id=db_call.id,
         filename=db_call.filename,

@@ -31,3 +31,7 @@ class CallsListResponse(BaseModel):
     calls: List[CallRecordResponse]
     total: int
 
+
+class TagRequest(BaseModel):
+    tag: str
+

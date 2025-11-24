@@ -128,3 +128,26 @@ export async function getAvailableTags(): Promise<string[]> {
 export function getAudioUrl(callId: string): string {
   return `${API_BASE_URL}/api/calls/${callId}/audio`;
 }
+
+export async function addCallTag(callId: string, tag: string): Promise<CallRecord> {
+  const response = await fetch(`${API_BASE_URL}/api/calls/${callId}/tags`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ tag }),
+  });
+
+  return handleResponse<CallRecord>(response);
+}
+
+export async function removeCallTag(callId: string, tag: string): Promise<CallRecord> {
+  const url = new URL(`${API_BASE_URL}/api/calls/${callId}/tags`);
+  url.searchParams.append('tag', tag);
+
+  const response = await fetch(url.toString(), {
+    method: 'DELETE',
+  });
+
+  return handleResponse<CallRecord>(response);
+}
