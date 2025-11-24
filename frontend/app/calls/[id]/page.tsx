@@ -16,6 +16,7 @@ export default function CallDetailPage() {
   const [newTag, setNewTag] = useState('');
   const [tagError, setTagError] = useState<string | null>(null);
   const [tagLoading, setTagLoading] = useState(false);
+  const [downloadState, setDownloadState] = useState<'idle' | 'downloading'>('idle');
 
   useEffect(() => {
     if (callId) {
@@ -92,6 +93,26 @@ export default function CallDetailPage() {
     }
   };
 
+  const handleDownloadJson = () => {
+    if (!call || downloadState === 'downloading') return;
+    setDownloadState('downloading');
+    try {
+      const fileData = JSON.stringify(call, null, 2);
+      const blob = new Blob([fileData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const filenameSafe = call.filename.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_\-\.]/g, '');
+      link.href = url;
+      link.download = `${filenameSafe || 'call'}-${call.id}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloadState('idle');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white py-8 sm:py-12 relative">
@@ -139,15 +160,40 @@ export default function CallDetailPage() {
     <div className="min-h-screen bg-white relative overflow-hidden">
      
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 relative z-10">
-        <button
-          onClick={() => router.push('/')}
-          className="mb-6 text-sm text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Calls
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <button
+            onClick={() => router.push('/')}
+            className="text-sm text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1 w-fit"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Calls
+          </button>
+
+          <button
+            onClick={handleDownloadJson}
+            disabled={downloadState === 'downloading'}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
+            style={{ background: 'linear-gradient(90deg, #237bff, #9ec5ff)' }}
+          >
+            {downloadState === 'downloading' ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Preparing...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 16v4h16v-4" />
+                </svg>
+                Download JSON
+              </>
+            )}
+          </button>
+        </div>
 
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="p-4 border-b border-gray-200" style={{ background: 'linear-gradient(90deg, rgba(35, 123, 255, 0.05), rgba(158, 197, 255, 0.05))' }}>
