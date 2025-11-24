@@ -139,6 +139,7 @@ Note: To avoid conflicts between your local environment and the Linux Docker env
 2. Single-user application (no auth)
 3. Local file storage 
 4. English language optimized (Whisper supports multiple languages)
+5. It will only support 
 
 ## Improvements for Production
 
