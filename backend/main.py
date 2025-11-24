@@ -1,6 +1,34 @@
-def main():
-    print("Hello from backend!")
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from database import init_db
+import os
+
+app = FastAPI(
+    title="Altur Homework API",
+    description="Backend API for audio file transcription and analysis",
+    version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+init_db()
 
 
-if __name__ == "__main__":
-    main()
+@app.get("/")
+async def root():
+    return {
+        "message": "Audio Transcription & Analysis API",
+        "version": "1.0.0",
+        "docs": "/docs"
+    }
+
+
+@app.get("/health")
+async def health():
+    return {"status": "App is running fine :)"}
