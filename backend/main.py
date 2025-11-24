@@ -20,6 +20,7 @@ app.add_middleware(
 init_db()
 
 
+
 @app.get("/")
 async def root():
     return {
